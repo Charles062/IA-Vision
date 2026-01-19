@@ -4,14 +4,16 @@
 mod ingestion;
 mod automation;
 mod vision;
+mod accessibility;
 
 use ingestion::IngestionService;
 use tauri::Manager;
-use automation::implementation::{get_active_window_elements, perform_action};
+use automation::implementation::perform_action;
+use accessibility::implementation::get_ui_tree as get_ui_tree_impl;
 
 #[tauri::command]
-fn get_ui_tree() -> Result<Vec<automation::UIElement>, String> {
-    get_active_window_elements().map_err(|e| e.to_string())
+fn get_ui_tree() -> Result<Vec<accessibility::UIElement>, String> {
+    get_ui_tree_impl().map_err(|e| e.to_string())
 }
 
 #[tauri::command]

@@ -17,6 +17,9 @@ tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
+xcap = "0.0.6"
+image = "0.25"
+active-win-pos-rs = "0.8"
 
 # Windows Automation
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -24,6 +27,7 @@ windows = { version = "0.58.0", features = [
     "Win32_UI_Accessibility",
     "Win32_UI_WindowsAndMessaging",
     "Win32_System_Com",
+    "UI_UIAutomation",
     "Win32_UI_Input_KeyboardAndMouse",
     "Win32_Foundation",
     "Win32_System_Variant",
