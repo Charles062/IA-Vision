@@ -1,5 +1,3 @@
-use tauri::Emitter;
-use std::process::Command;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Serialize, Deserialize)]

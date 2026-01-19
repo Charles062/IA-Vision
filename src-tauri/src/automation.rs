@@ -13,14 +13,12 @@ pub struct UIElement {
 #[cfg(target_os = "windows")]
 pub mod implementation {
     use super::UIElement;
-    use enigo::{Enigo, Key, KeyboardControllable, MouseControllable, Settings};
     use windows::{
         core::*,
         Win32::Foundation::*,
         Win32::System::Com::*,
         Win32::UI::Accessibility::*,
         Win32::UI::WindowsAndMessaging::*,
-        Win32::System::Variant::*,
     };
 
     pub fn get_active_window_elements() -> Result<Vec<UIElement>> {
@@ -35,7 +33,7 @@ pub mod implementation {
 
             // Get Foreground Window
             let hwnd = GetForegroundWindow();
-            if hwnd.0 == 0 {
+            if hwnd.0.is_null() {
                 return Ok(elements);
             }
 
@@ -46,12 +44,11 @@ pub mod implementation {
             // Or create a PropertyCondition. For now, we stick to FindAll with TrueCondition
             // but we rely on the `ControlView` logic implicitly if we wanted, but FindAll ignores Walker.
 
-            // Optimization: Create a property condition for IsControlElement = true
-            // UIA_IsControlElementPropertyId = 30016
-            let is_control_prop = automation.CreatePropertyCondition(30016, Variant::from(true))?;
+            // Use TrueCondition to get all elements (simpler and works with newer windows crate)
+            let true_condition = automation.CreateTrueCondition()?;
 
-            // Using TreeScope_Descendants with IsControlElement=true is better than TrueCondition
-            let element_array = root_element.FindAll(TreeScope_Descendants, &is_control_prop)?;
+            // Using TreeScope_Descendants to get all descendant elements
+            let element_array = root_element.FindAll(TreeScope_Descendants, &true_condition)?;
             let count = element_array.Length()?;
 
             for i in 0..count {
@@ -66,7 +63,7 @@ pub mod implementation {
 
                 // Get Control Type (ID)
                 let control_type_id = element.CurrentControlType()?;
-                let control_type = match control_type_id {
+                let control_type = match control_type_id.0 {
                     50000 => "Button",
                     50004 => "Edit",
                     50030 => "Document",
@@ -99,22 +96,23 @@ pub mod implementation {
         Ok(elements)
     }
 
-    pub fn perform_action(action_type: &str, x: i32, y: i32, text: Option<&str>) -> Result<()> {
-        // Enigo 0.3.0+ requires Settings
+    pub fn perform_action(action_type: &str, x: i32, y: i32, text: Option<&str>) -> anyhow::Result<()> {
+        use enigo::{Enigo, Settings, Mouse, Keyboard, Coordinate, Button, Direction};
+        
         let mut enigo = Enigo::new(&Settings::default()).map_err(|e| anyhow::anyhow!("Failed to init Enigo: {:?}", e))?;
 
         match action_type {
             "click" => {
-                enigo.mouse_move_to(x, y);
-                enigo.mouse_click(enigo::MouseButton::Left);
+                let _ = enigo.move_mouse(x, y, Coordinate::Abs);
+                let _ = enigo.button(Button::Left, Direction::Click);
             },
             "type" => {
                 if let Some(t) = text {
-                    enigo.mouse_move_to(x, y);
-                    enigo.mouse_click(enigo::MouseButton::Left);
+                    let _ = enigo.move_mouse(x, y, Coordinate::Abs);
+                    let _ = enigo.button(Button::Left, Direction::Click);
                     // Create a small delay might be needed in real world
                     std::thread::sleep(std::time::Duration::from_millis(50));
-                    enigo.key_sequence(t);
+                    let _ = enigo.text(t);
                 }
             },
             _ => {}

@@ -21,7 +21,21 @@ fn execute_action(action_type: String, x: i32, y: i32, text: Option<String>) -> 
 
 fn main() {
     tauri::Builder::default()
-        .setup(|app| {
+        .setup(|_app| {
+            // Start Ollama with llama3 model
+            println!("Starting Ollama server with llama3...");
+            std::thread::spawn(|| {
+                let _ = std::process::Command::new("ollama")
+                    .args(["serve"])
+                    .spawn();
+                // Give the server a moment to start
+                std::thread::sleep(std::time::Duration::from_secs(2));
+                // Pull/run llama3 to ensure it's ready
+                let _ = std::process::Command::new("ollama")
+                    .args(["run", "llama3", "--keepalive", "24h"])
+                    .spawn();
+            });
+
             // Spawn the ingestion service in the background
             tauri::async_runtime::spawn(async move {
                 let service = IngestionService::new();
