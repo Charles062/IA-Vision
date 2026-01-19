@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "second-brain",
+  "productName": "openvy-win",
   "version": "0.1.0",
-  "identifier": "com.secondbrain.app",
+  "identifier": "com.openvy.win",
   "build": {
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "SecondBrain",
+        "title": "OpenVy-Win",
         "width": 1200,
         "height": 800
       }
@@ -24,6 +24,9 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "icon": []
+    "icon": [],
+    "externalBin": [
+      "screenpipe"
+    ]
   }
 }
