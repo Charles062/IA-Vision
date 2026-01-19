@@ -1,5 +1,5 @@
 [package]
-name = "second-brain"
+name = "openvy-win"
 version = "0.1.0"
 description = "A local second brain powered by Tauri and local LLMs"
 authors = ["you"]
@@ -16,12 +16,29 @@ serde_json = "1"
 tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
-# Capture and OCR
-xcap = "0.0.6" # Cross-platform screen capture
-image = "0.25" # Image processing
-active-win-pos-rs = "0.8" # Active window metadata
+reqwest = { version = "0.11", features = ["blocking", "json"] }
 
-# Database (Placeholder for now, but part of the stack)
+# Windows Automation
+[target.'cfg(target_os = "windows")'.dependencies]
+windows = { version = "0.58.0", features = [
+    "Win32_UI_Accessibility",
+    "Win32_UI_WindowsAndMessaging",
+    "Win32_System_Com",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_Foundation",
+    "Win32_System_Variant",
+    "Win32_System_Ole",
+    "Win32_System_Threading",
+    "Win32_Security",
+] }
+enigo = "0.3.0"
+
+# Capture and OCR (Keeping old ones if needed for fallback, but main is now sidecar)
+xcap = "0.0.6"
+image = "0.25"
+active-win-pos-rs = "0.8"
+
+# Database
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
 
 # OCR Engine
