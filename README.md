@@ -1,4 +1,4 @@
-# 🧠 OpenVy-Win
+# 🧠 IA-Vision
 
 **Assistente de Automação de Desktop com IA Local**
 
