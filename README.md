@@ -97,7 +97,7 @@ IA planeja:
 - [Node.js 18+](https://nodejs.org/)
 - [Rust](https://rustup.rs/)
 - [Ollama](https://ollama.com/)
-- (Opcional) [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) para reconhecimento de texto
+- Tesseract OCR (Necessário para leitura de tela)
 
 ### Linux (dependências adicionais)
 ```bash
@@ -157,7 +157,7 @@ npx tauri dev
 | **Linux Accessibility** | ❌ Não implementado | `accessibility/linux.rs` retorna árvore vazia. Precisa implementar AT-SPI 0.19 |
 | **Linux Automation** | ❌ Mock | `automation.rs` no Linux apenas imprime no console, não executa ações reais |
 | **Screenshot Linux** | ⚠️ Instável | `xcap` falha em alguns ambientes Linux (Wayland, permissões) |
-| **OCR Real** | ❌ Placeholder | `ingestion.rs` retorna texto fixo ao invés de fazer OCR real |
+| **OCR Real** | ✅ | Implementado com `rusty-tesseract` em `ingestion.rs` |
 
 ### 🟡 Importante (Melhorias significativas)
 
