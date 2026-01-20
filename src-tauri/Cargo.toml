@@ -17,9 +17,16 @@ tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
+# Capture and OCR
 xcap = "0.0.6"
 image = "0.25"
 active-win-pos-rs = "0.8"
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
+# OCR Engine
+ocrs = "0.4"
+rten = "0.4"
+rten-tensor = "0.4"
 
 # Windows Automation
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -37,15 +44,7 @@ windows = { version = "0.58.0", features = [
 ] }
 enigo = "0.3.0"
 
-# Capture and OCR (Keeping old ones if needed for fallback, but main is now sidecar)
-xcap = "0.0.6"
-image = "0.25"
-active-win-pos-rs = "0.8"
-
-# Database
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
-
-# OCR Engine
-ocrs = "0.4"
-rten = "0.4"
-rten-tensor = "0.4"
+# Linux Automation
+[target.'cfg(target_os = "linux")'.dependencies]
+atspi = "0.19.0"
+zbus = "4.0"

@@ -9,11 +9,11 @@ mod accessibility;
 use ingestion::IngestionService;
 use tauri::Manager;
 use automation::implementation::perform_action;
-use accessibility::implementation::get_ui_tree as get_ui_tree_impl;
+use accessibility::get_ui_tree as get_ui_tree_impl;
 
 #[tauri::command]
-fn get_ui_tree() -> Result<Vec<accessibility::UIElement>, String> {
-    get_ui_tree_impl().map_err(|e| e.to_string())
+async fn get_ui_tree(max_depth: Option<u32>) -> Result<Vec<accessibility::UIElement>, String> {
+    get_ui_tree_impl(max_depth.unwrap_or(10)).await
 }
 
 #[tauri::command]
