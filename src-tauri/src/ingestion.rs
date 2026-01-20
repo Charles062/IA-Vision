@@ -6,6 +6,7 @@ use tokio::time::sleep;
 use xcap::Monitor;
 use active_win_pos_rs::get_active_window;
 use image::DynamicImage;
+use rusty_tesseract::{Args, Image};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ScreenData {
@@ -52,6 +53,7 @@ impl IngestionService {
         let image = monitor.capture_image().map_err(|e| anyhow!("Screenshot failed: {}", e))?;
 
         // Convert to DynamicImage for processing if needed, though xcap returns RgbaImage usually
+        // xcap 0.0.6 uses image 0.24, which we have aligned in Cargo.toml
         let dynamic_image = DynamicImage::ImageRgba8(image);
 
         // Get Active Window
@@ -61,7 +63,7 @@ impl IngestionService {
         };
 
         // Perform OCR
-        let ocr_text = self.perform_ocr(&dynamic_image)?;
+        let ocr_text = self.perform_ocr(&dynamic_image).await?;
 
         Ok(ScreenData {
             timestamp: Utc::now(),
@@ -71,13 +73,27 @@ impl IngestionService {
         })
     }
 
-    fn perform_ocr(&self, image: &DynamicImage) -> Result<String> {
-        // NOTE: In a production environment with `ocrs`, we would:
-        // 1. Prepare the image (resize, grayscale).
-        // 2. Pass it to the loaded OCR engine.
-        // 3. Extract text.
+    async fn perform_ocr(&self, image: &DynamicImage) -> Result<String> {
+        let image = image.clone();
 
-        // For now, return a placeholder to verify the pipeline structure
-        Ok("OCR Integration Point: Real text would appear here.".to_string())
+        let text = tokio::task::spawn_blocking(move || {
+            // Create Image from DynamicImage
+            // rusty-tesseract 1.1+ supports from_dynamic_image.
+            // Since we aligned image crate version to 0.24, this should work seamlessly.
+            let img = Image::from_dynamic_image(&image)
+                .map_err(|e| anyhow!("Failed to create Tesseract Image: {}", e))?;
+
+            // Configure Tesseract arguments
+            let args = Args {
+                lang: "eng+por".to_string(),
+                ..Args::default()
+            };
+
+            // Execute OCR
+            rusty_tesseract::image_to_string(&img, &args)
+                .map_err(|e| anyhow!("Tesseract OCR failed: {}", e))
+        }).await.map_err(|e| anyhow!("OCR task join error: {}", e))??;
+
+        Ok(text)
     }
 }
