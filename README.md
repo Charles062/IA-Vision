@@ -1,18 +1,28 @@
-# 🧠 IA-Vision
+# 🤖 OpenVy-Win (IA-Vision)
 
-**Assistente de Automação de Desktop com IA Local**
+> **Agente de Automação de Interface com IA Local** - Controle seu computador usando linguagem natural!
 
-OpenVy-Win é um "segundo cérebro" que pode ver sua tela, entender comandos em linguagem natural e executar ações automaticamente no seu computador Windows.
+OpenVy-Win é uma aplicação desktop que permite automatizar tarefas no computador através de comandos em linguagem natural. A aplicação usa IA local (Ollama + LLaMA 3) para interpretar seus comandos e executar ações na interface gráfica.
 
 ---
 
-## ✨ Funcionalidades
+## 🎯 O que é?
 
-- 🖥️ **Captura de Tela** - Captura a janela ativa e identifica elementos da interface
-- 🤖 **IA Local (Ollama)** - Processa comandos usando LLM local (sem enviar dados para nuvem)
-- ⚡ **Automação Windows** - Executa cliques e digitação automaticamente
-- 💬 **Interface de Chat** - Interface moderna para interagir com a IA
-- 🔄 **Auto-inicialização** - Ollama inicia automaticamente com o app
+OpenVy-Win é um **agente de automação visual** que:
+
+1. **Captura a tela** do seu computador
+2. **Analisa os elementos da interface** (botões, campos de texto, menus)
+3. **Interpreta comandos em linguagem natural** usando IA local
+4. **Executa ações automaticamente** (cliques, digitação)
+
+### Exemplo de Uso
+```
+Você: "Abra o Notepad e digite Hello World"
+
+IA planeja:
+→ Clicar no botão Notepad
+→ Digitar "Hello World"
+```
 
 ---
 
@@ -20,52 +30,82 @@ OpenVy-Win é um "segundo cérebro" que pode ver sua tela, entender comandos em 
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    OpenVy-Win (Tauri App)                   │
+│                    OpenVy-Win (Tauri)                       │
 ├─────────────────────────────────────────────────────────────┤
-│  Frontend (Next.js 15 + React 19 + TypeScript)              │
-│  └── chat-interface.tsx  →  Interface de chat               │
-│  └── llm.ts              →  Conexão com Ollama              │
+│  Frontend (Next.js + React)                                 │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ chat-interface.tsx  │ Interface de chat com usuário    ││
+│  │ llm.ts              │ Comunicação com Ollama API       ││
+│  └─────────────────────────────────────────────────────────┘│
 ├─────────────────────────────────────────────────────────────┤
-│  Backend (Rust)                                              │
-│  └── automation.rs  →  UI Automation (Win32 API)            │
-│  └── ingestion.rs   →  Captura de tela + OCR                │
-│  └── vision.rs      →  Sistema de visão                     │
-│  └── main.rs        →  Entry point + auto-start Ollama      │
+│  Backend (Rust)                                             │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ main.rs             │ Entry point + Tauri commands     ││
+│  │ ingestion.rs        │ Captura de tela + OCR            ││
+│  │ automation.rs       │ Execução de ações (mouse/teclado)││
+│  │ accessibility/      │ Árvore de elementos UI           ││
+│  │   ├── win.rs        │ Windows UI Automation            ││
+│  │   └── linux.rs      │ Linux AT-SPI (em desenvolvimento)││
+│  │ vision.rs           │ Integração ScreenPipe            ││
+│  └─────────────────────────────────────────────────────────┘│
+├─────────────────────────────────────────────────────────────┤
+│  LLM Local                                                  │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │ Ollama + LLaMA 3    │ Modelo de IA local               ││
+│  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## 🛠️ Stack Tecnológica
+## 🔧 Como Funciona
 
-| Componente | Tecnologia |
-|------------|------------|
-| **Framework Desktop** | Tauri 2.0 |
-| **Frontend** | Next.js 15, React 19, TypeScript, TailwindCSS |
-| **Backend** | Rust |
-| **UI Automation** | Windows Win32 API (IUIAutomation) |
-| **Simulação de Input** | Enigo 0.3.0 |
-| **LLM Local** | Ollama (Llama3) |
-| **OCR** | OCRS |
-| **Captura de Tela** | xcap |
-| **Database** | SQLx + SQLite |
+### 1. Captura de Contexto (`ingestion.rs`)
+- Captura screenshots da tela a cada 5 segundos
+- Identifica a janela ativa (nome do app, título)
+- Realiza OCR para extrair texto da tela
+
+### 2. Árvore de Acessibilidade (`accessibility/`)
+- **Windows**: Usa UI Automation para obter elementos (botões, campos, etc.)
+- **Linux**: Usa AT-SPI (em desenvolvimento)
+- Retorna: nome, tipo, coordenadas e estado de cada elemento
+
+### 3. Planejamento com LLM (`llm.ts`)
+- Envia o comando do usuário + elementos visíveis para o Ollama
+- O LLM retorna um plano de ações em JSON:
+```json
+[
+  {"action": "click", "x": 100, "y": 200, "description": "Clicar no menu"},
+  {"action": "type", "text": "Hello", "description": "Digitar texto"}
+]
+```
+
+### 4. Execução (`automation.rs`)
+- **Windows**: Usa `enigo` para controlar mouse/teclado
+- **Linux**: Mock implementado (aguardando implementação completa)
 
 ---
 
-## 📋 Pré-requisitos
+## 📋 Requisitos
 
-Antes de iniciar, certifique-se de ter instalado:
+### Sistema
+- **OS**: Windows 10/11 (suporte completo) ou Linux (parcial)
+- **RAM**: 8GB+ (recomendado 16GB para LLM)
+- **GPU**: Opcional, mas acelera o LLM
 
-1. **Node.js** (v18+) e **npm**
-2. **Rust** e **Cargo** - [rustup.rs](https://rustup.rs)
-3. **Visual Studio Build Tools 2022** com:
-   - MSVC v143 - VS 2022 C++ x64/x86 build tools
-   - Windows 10/11 SDK
-4. **Ollama** - [ollama.com/download](https://ollama.com/download)
+### Dependências
+- [Node.js 18+](https://nodejs.org/)
+- [Rust](https://rustup.rs/)
+- [Ollama](https://ollama.com/)
+
+### Linux (dependências adicionais)
+```bash
+sudo apt install pkg-config libssl-dev libgtk-3-dev libwebkit2gtk-4.1-dev librsvg2-dev
+```
 
 ---
 
-## 🚀 Como Executar
+## 🚀 Instalação
 
 ### 1. Clone o repositório
 ```bash
@@ -78,95 +118,100 @@ cd IA-Vision
 npm install
 ```
 
-### 3. Baixe o modelo Llama3 (primeira vez)
+### 3. Instale o Ollama e o modelo
 ```bash
+curl -fsSL https://ollama.com/install.sh | sh
 ollama pull llama3
 ```
 
-### 4. Execute em modo desenvolvimento
+### 4. Execute a aplicação
 ```bash
 npx tauri dev
 ```
 
-> **Nota:** O Ollama será iniciado automaticamente quando o app abrir.
+---
+
+## ⚠️ O que está Faltando
+
+### 🔴 Crítico (Necessário para funcionar)
+
+| Componente | Status | Descrição |
+|------------|--------|-----------|
+| **Linux Accessibility** | ❌ Não implementado | `accessibility/linux.rs` retorna árvore vazia. Precisa implementar AT-SPI 0.19 |
+| **Linux Automation** | ❌ Mock | `automation.rs` no Linux apenas imprime no console, não executa ações reais |
+| **Screenshot Linux** | ⚠️ Instável | `xcap` falha em alguns ambientes Linux (Wayland, permissões) |
+| **OCR Real** | ❌ Placeholder | `ingestion.rs` retorna texto fixo ao invés de fazer OCR real |
+
+### 🟡 Importante (Melhorias significativas)
+
+| Componente | Status | Descrição |
+|------------|--------|-----------|
+| **Persistência de Contexto** | ❌ Não implementado | Falta SQLite/Vector DB para salvar histórico de capturas |
+| **ScreenPipe Integration** | ⚠️ Stub | `vision.rs` tem código de integração mas não está funcional |
+| **Tratamento de Erros** | ⚠️ Básico | Erros do LLM/Ollama não são bem tratados na UI |
+| **Suporte a macOS** | ❌ Não implementado | Apenas fallback vazio |
+
+### 🟢 Melhorias Futuras
+
+| Feature | Descrição |
+|---------|-----------|
+| **Multimodal (Visão)** | Usar modelos como LLaVA para "ver" a tela |
+| **Múltiplos Monitores** | Suporte a setup multi-monitor |
+| **Gravação de Macros** | Gravar e reproduzir sequências de ações |
+| **Plugins** | Sistema de extensões para apps específicos |
+| **Voice Input** | Comandos por voz |
 
 ---
 
-## 💻 Como Usar
-
-1. Abra a aplicação OpenVy-Win
-2. Digite um comando na interface de chat, por exemplo:
-   - `"Abra o Notepad e digite Olá Mundo"`
-   - `"Clique no botão Arquivo"`
-   - `"Digite meu nome no campo de texto"`
-3. A IA irá:
-   - Analisar a tela atual
-   - Planejar as ações necessárias
-   - Executar os cliques e digitação automaticamente
-
----
-
-## 📁 Estrutura de Arquivos
+## 📁 Estrutura do Projeto
 
 ```
 IA-Vision/
-├── app/
-│   ├── page.tsx                    # Página principal
+├── app/                          # Frontend Next.js
 │   ├── components/
-│   │   └── chat-interface.tsx      # Interface de chat com a IA
-│   └── services/
-│       └── llm.ts                  # Conexão com Ollama
-├── src-tauri/
+│   │   └── chat-interface.tsx    # Interface de chat
+│   ├── services/
+│   │   └── llm.ts                # Cliente Ollama
+│   ├── globals.css               # Estilos globais
+│   ├── layout.tsx                # Layout principal
+│   └── page.tsx                  # Página inicial
+├── src-tauri/                    # Backend Rust
 │   ├── src/
-│   │   ├── main.rs                 # Entry point + auto-start Ollama
-│   │   ├── automation.rs           # UI Automation (Win32 API)
-│   │   ├── ingestion.rs            # Captura de tela + OCR
-│   │   └── vision.rs               # Sistema de visão
-│   ├── Cargo.toml                  # Dependências Rust
-│   ├── tauri.conf.json             # Configuração Tauri
-│   └── icons/                      # Ícones do app
-├── package.json                    # Dependências Node.js
-└── README.md                       # Este arquivo
+│   │   ├── main.rs               # Entry point
+│   │   ├── automation.rs         # Controle mouse/teclado
+│   │   ├── ingestion.rs          # Captura de tela + OCR
+│   │   ├── vision.rs             # ScreenPipe integration
+│   │   └── accessibility/
+│   │       ├── mod.rs            # Module exports
+│   │       ├── win.rs            # Windows UI Automation
+│   │       └── linux.rs          # Linux AT-SPI
+│   ├── Cargo.toml                # Dependências Rust
+│   └── tauri.conf.json           # Configuração Tauri
+├── package.json                  # Dependências Node.js
+└── README.md                     # Este arquivo
 ```
 
 ---
 
-## 🔧 Correções e Melhorias Recentes
+## 🤝 Contribuindo
 
-### v0.1.0 (Janeiro 2026)
+Contribuições são bem-vindas! Áreas prioritárias:
 
-- ✅ **Auto-start do Ollama** - O servidor Ollama inicia automaticamente com o modelo llama3
-- ✅ **Correção Enigo 0.3.0** - Atualizada API de automação de mouse/teclado
-- ✅ **Correção Windows API** - Consertados problemas de tipo com `HWND` e `UIA_CONTROLTYPE_ID`
-- ✅ **Geração de Ícones** - Criados ícones válidos para Windows, iOS e Android
-- ✅ **Instalação @tauri-apps/api** - Adicionada dependência de API do Tauri para o frontend
-- ✅ **Remoção Screenpipe** - Removida dependência de sidecar não disponível
-- ✅ **Merge de Branches** - Integração do chat frontend e serviço LLM da branch openvy-win
+1. **Implementar Linux AT-SPI** em `accessibility/linux.rs`
+2. **Implementar automação Linux** com `enigo` ou `xdotool`
+3. **Integrar OCR real** com `ocrs` ou `tesseract`
+4. **Melhorar tratamento de erros** na UI
 
 ---
 
-## 🐛 Problemas Conhecidos
+## 📝 Licença
 
-- O modelo llama3 pode demorar alguns segundos para carregar na primeira execução
-- Requer Windows 10/11 para funcionar (usa APIs específicas do Windows)
-- O OCR ainda está em desenvolvimento (placeholder ativo)
+MIT License - Veja [LICENSE](LICENSE) para detalhes.
 
 ---
 
-## 📄 Licença
+## 🔗 Links
 
-Este projeto é privado e pertence a Charles062.
-
----
-
-## 🤝 Contribuição
-
-Para contribuir com o projeto:
-
-1. Crie uma branch a partir de `Main-IA`
-2. Faça suas alterações
-3. Abra um Pull Request
-
----
-
-**Desenvolvido com ❤️ usando Tauri, Next.js e Rust**
+- **Repositório**: https://github.com/Charles062/IA-Vision
+- **Ollama**: https://ollama.com/
+- **Tauri**: https://tauri.app/
