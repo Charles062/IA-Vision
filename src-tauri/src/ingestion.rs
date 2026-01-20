@@ -7,6 +7,7 @@ use xcap::Monitor;
 use active_win_pos_rs::get_active_window;
 use image::DynamicImage;
 use rusty_tesseract::{Args, Image};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ScreenData {
@@ -63,7 +64,11 @@ impl IngestionService {
         };
 
         // Perform OCR
-        let ocr_text = self.perform_ocr(&dynamic_image).await?;
+        let img_clone = dynamic_image.clone();
+        let ocr_text = tokio::task::spawn_blocking(move || perform_ocr(img_clone))
+            .await
+            .map_err(|e| anyhow!("OCR task join error: {}", e))?
+            .map_err(|e| anyhow!("{}", e))?;
 
         Ok(ScreenData {
             timestamp: Utc::now(),
@@ -72,28 +77,31 @@ impl IngestionService {
             ocr_text,
         })
     }
+}
 
-    async fn perform_ocr(&self, image: &DynamicImage) -> Result<String> {
-        let image = image.clone();
+/// Realiza OCR em um buffer de imagem (PNG/JPEG bytes)
+fn perform_ocr(img: DynamicImage) -> Result<String, String> {
+    // 2. Prepara imagem para o Tesseract
+    let tesseract_img = Image::from_dynamic_image(&img)
+        .map_err(|e| format!("Erro ao converter imagem para Tesseract: {}", e))?;
 
-        let text = tokio::task::spawn_blocking(move || {
-            // Create Image from DynamicImage
-            // rusty-tesseract 1.1+ supports from_dynamic_image.
-            // Since we aligned image crate version to 0.24, this should work seamlessly.
-            let img = Image::from_dynamic_image(&image)
-                .map_err(|e| anyhow!("Failed to create Tesseract Image: {}", e))?;
+    // 3. Configura argumentos (inglês padrão, whitelist de caracteres básicos)
+    let args = Args {
+        lang: "eng".to_string(),
+        config_variables: HashMap::from([(
+            "tessedit_char_whitelist".into(),
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:;?!@#$%&*()-_=+[]{}/\\\"'".into(),
+        )]),
+        ..Default::default()
+    };
 
-            // Configure Tesseract arguments
-            let args = Args {
-                lang: "eng+por".to_string(),
-                ..Args::default()
-            };
+    // 4. Executa o OCR
+    let text = rusty_tesseract::image_to_string(&tesseract_img, &args)
+        .map_err(|e| format!("Falha na execução do Tesseract (Verifique se binário está instalado): {}", e))?;
 
-            // Execute OCR
-            rusty_tesseract::image_to_string(&img, &args)
-                .map_err(|e| anyhow!("Tesseract OCR failed: {}", e))
-        }).await.map_err(|e| anyhow!("OCR task join error: {}", e))??;
-
-        Ok(text)
+    if text.trim().is_empty() {
+        return Ok("[Nenhum texto detectado na tela]".to_string());
     }
+
+    Ok(text)
 }
