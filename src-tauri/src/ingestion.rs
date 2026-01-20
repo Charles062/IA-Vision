@@ -79,13 +79,9 @@ impl IngestionService {
         // Perform OCR
         let ocr_text = if self.is_tesseract_available() {
             let img_clone = dynamic_image.clone();
+            // OCR em thread separada (CPU-bound)
             tokio::task::spawn_blocking(move || perform_ocr(img_clone))
-                .await
-                .map_err(|e| anyhow!("OCR task join error: {}", e))?
-                .unwrap_or_else(|e| {
-                    eprintln!("OCR warning: {}", e);
-                    String::new()
-                })
+                .await?? // Tratar JoinError e OCR Error
         } else {
             // Silently skip if not available (logged once at startup ideally, but here is fine)
             static RECORDED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -104,29 +100,28 @@ impl IngestionService {
     }
 }
 
-/// Realiza OCR em um buffer de imagem (PNG/JPEG bytes)
-fn perform_ocr(img: DynamicImage) -> Result<String, String> {
-    // 2. Prepara imagem para o Tesseract
+/// Executa o OCR utilizando o Tesseract instalado no sistema.
+/// Retorna o texto extraído ou erro.
+fn perform_ocr(img: DynamicImage) -> anyhow::Result<String> {
+    // Converte a imagem v0.25 para o formato do rusty_tesseract
+    // Se houver incompatibilidade de tipos entre image 0.25 e rusty-tesseract,
+    // use um fallback de encoding/decoding na memória, mas tente direto primeiro.
     let tesseract_img = Image::from_dynamic_image(&img)
-        .map_err(|e| format!("Erro ao converter imagem para Tesseract: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Erro converter imagem p/ Tesseract: {}", e))?;
 
-    // 3. Configura argumentos (inglês padrão, whitelist de caracteres básicos)
     let args = Args {
         lang: "eng".to_string(),
-        config_variables: HashMap::from([(
-            "tessedit_char_whitelist".into(),
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:;?!@#$%&*()-_=+[]{}/\\\"'".into(),
-        )]),
+        config_variables: HashMap::from([
+            ("tessedit_char_whitelist".into(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:;?!@#$%&*()-_=+[]{}/\\\"'".into())
+        ]),
         ..Default::default()
     };
 
-    // 4. Executa o OCR
     let text = rusty_tesseract::image_to_string(&tesseract_img, &args)
-        .map_err(|e| format!("Falha na execução do Tesseract (Verifique se binário está instalado): {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Erro Tesseract (Verifique instalação): {}", e))?;
 
     if text.trim().is_empty() {
-        return Ok("[Nenhum texto detectado na tela]".to_string());
+        return Ok("[Nenhum texto detectado]".to_string());
     }
-
     Ok(text)
 }
