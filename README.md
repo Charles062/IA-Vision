@@ -132,6 +132,22 @@ npx tauri dev
 
 ---
 
+## 🛠️ Solução de Problemas
+
+### Erro: "Tesseract not found"
+- **Causa**: O binário do Tesseract não está no PATH do sistema.
+- **Solução**: O sistema desativará o OCR automaticamente e continuará funcionando (sem leitura de texto). Para ativar, instale o Tesseract e adicione ao PATH.
+
+### Erro: "LLM Response is not an array"
+- **Causa**: O modelo de IA retornou uma resposta fora do padrão (ex: objeto único).
+- **Correção**: Já aplicada na versão atual. O sistema agora trata automaticamente respostas formatadas incorretamente pelo modelo `qwen2.5-coder`.
+
+### O mouse clica no lugar errado
+- **Causa**: Escala de DPI do Windows ou erro de interpretação de coordenadas.
+- **Correção**: Certifique-se de que a escala do Windows está em 100% ou use a versão mais recente que corrige o mapeamento de `bounding_box`.
+
+---
+
 ## ⚠️ O que está Faltando
 
 ### 🔴 Crítico (Necessário para funcionar)

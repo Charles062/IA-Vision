@@ -10,23 +10,32 @@ export interface Action {
 export async function generatePlan(userRequest: string, uiTree: any[]): Promise<Action[]> {
   // Filter the UI tree to reduce token count (crucial for local LLMs)
   // We only keep essential fields
-  const simplifiedTree = uiTree.map(el => ({
-    type: el.control_type,
-    name: el.name,
-    x: el.x + el.width / 2, // Center point
-    y: el.y + el.height / 2
-  })).slice(0, 50); // Limit items for safety
+  const simplifiedTree = uiTree.map(el => {
+    // Backend returns bounding_box: [x, y, width, height]
+    const [x, y, width, height] = el.bounding_box || [0, 0, 0, 0];
+    return {
+      type: el.control_type,
+      name: el.name,
+      x: Math.round(x + width / 2), // Center point
+      y: Math.round(y + height / 2)
+    };
+  }).slice(0, 50); // Limit items for safety
 
   const systemPrompt = `You are a Windows Automation Agent.
 Your goal is to map a user request to a sequence of actions on the active window.
-You are provided with a list of UI Elements currently visible.
 
-Tools available:
-- click(x, y): Click at coordinates.
-- type(text): Type text at current location (usually after a click).
+Tools:
+- click(x, y)
+- type(text)
 
-Return ONLY a valid JSON array of objects with keys: "action" ("click" or "type"), "x", "y", "text" (for type), "description".
-Do not include markdown blocks.
+Instructions:
+1. Analyze the Active Window Elements.
+2. Return a JSON Array of actions to fulfill the request.
+3. If no actions are needed or possible, return [].
+4. Output specific JSON format only. No text.
+
+Format:
+[{"action": "click", "x": 100, "y": 200, "description": "Label"}]
 
 Example:
 [
@@ -63,12 +72,70 @@ ${JSON.stringify(simplifiedTree)}
 
     const data = await response.json();
     let content = data.message.content;
-    console.log("Raw LLM Response:", content);
 
     // Cleanup if LLM adds markdown
     content = content.replace(/```json/g, '').replace(/```/g, '').trim();
 
-    return JSON.parse(content);
+    // Aggressive JSON extraction: Find the first '[' and the last ']'
+    const firstBracket = content.indexOf('[');
+    const lastBracket = content.lastIndexOf(']');
+
+    let parsed: any;
+
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+      const potentialJson = content.substring(firstBracket, lastBracket + 1);
+      try {
+        parsed = JSON.parse(potentialJson);
+      } catch (e) {
+        console.error("Failed to parse extracted JSON:", potentialJson);
+        // Fallback to full parse attempt
+        try { parsed = JSON.parse(content); } catch (e2) { }
+      }
+    } else {
+      // No brackets found, try parsing full content
+      try { parsed = JSON.parse(content); } catch (e) { }
+    }
+
+    // Handle wrapped responses if we still ended up with an object
+    if (!Array.isArray(parsed) && parsed && typeof parsed === 'object') {
+      if (parsed.actions && Array.isArray(parsed.actions)) {
+        parsed = parsed.actions;
+      } else if (parsed.plan && Array.isArray(parsed.plan)) {
+        parsed = parsed.plan;
+      } else {
+        // Basic heuristic: check values for an array
+        const values = Object.values(parsed);
+        const foundArray = values.find(v => Array.isArray(v));
+        if (foundArray) parsed = foundArray;
+      }
+    }
+
+    // Handle wrapped responses if we still ended up with an object
+    if (!Array.isArray(parsed) && parsed && typeof parsed === 'object') {
+      if (parsed.actions && Array.isArray(parsed.actions)) {
+        parsed = parsed.actions;
+      } else if (parsed.plan && Array.isArray(parsed.plan)) {
+        parsed = parsed.plan;
+      } else if (Object.keys(parsed).length === 0) {
+        return [];
+      } else {
+        // Check if it's a single action object (has 'action' key)
+        if (parsed.action) {
+          parsed = [parsed];
+        } else {
+          // Try to find an array in values
+          const values = Object.values(parsed);
+          const foundArray = values.find(v => Array.isArray(v));
+          if (foundArray) parsed = foundArray;
+        }
+      }
+    }
+
+    if (!Array.isArray(parsed)) {
+      console.error("LLM Error: Response is not an array (Final fallback)", parsed);
+      return [];
+    }
+    return parsed;
   } catch (e) {
     console.error("LLM Failed:", e);
     // Fallback/Mock for demo if Ollama isn't running
@@ -77,6 +144,6 @@ ${JSON.stringify(simplifiedTree)}
         { action: 'type', text: 'Hello from Mock Mode', description: 'Mock typing' }
       ];
     }
-    throw e;
+    return []; // Failure safe fallback
   }
 }
