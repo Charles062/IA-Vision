@@ -2,7 +2,7 @@
 
 > **Agente de Automação de Interface com IA Local** - Controle seu computador usando linguagem natural!
 
-OpenVy-Win é uma aplicação desktop que permite automatizar tarefas no computador através de comandos em linguagem natural. A aplicação usa IA local (Ollama + LLaMA 3) para interpretar seus comandos e executar ações na interface gráfica.
+OpenVy-Win é uma aplicação desktop que permite automatizar tarefas no computador através de comandos em linguagem natural. A aplicação usa IA local (Ollama + Qwen 2.5-Coder) para interpretar seus comandos e executar ações na interface gráfica.
 
 ---
 
@@ -51,7 +51,7 @@ IA planeja:
 ├─────────────────────────────────────────────────────────────┤
 │  LLM Local                                                  │
 │  ┌─────────────────────────────────────────────────────────┐│
-│  │ Ollama + LLaMA 3    │ Modelo de IA local               ││
+│  │ Ollama + Qwen 2.5   │ Modelo de IA local               ││
 │  └─────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -97,6 +97,7 @@ IA planeja:
 - [Node.js 18+](https://nodejs.org/)
 - [Rust](https://rustup.rs/)
 - [Ollama](https://ollama.com/)
+- (Opcional) [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki) para reconhecimento de texto
 
 ### Linux (dependências adicionais)
 ```bash
@@ -121,7 +122,7 @@ npm install
 ### 3. Instale o Ollama e o modelo
 ```bash
 curl -fsSL https://ollama.com/install.sh | sh
-ollama pull llama3
+ollama pull qwen2.5-coder:1.5b
 ```
 
 ### 4. Execute a aplicação

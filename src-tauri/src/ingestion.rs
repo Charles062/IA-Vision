@@ -26,6 +26,13 @@ impl IngestionService {
         Self {}
     }
 
+    fn is_tesseract_available(&self) -> bool {
+        std::process::Command::new("tesseract")
+            .arg("--version")
+            .output()
+            .is_ok()
+    }
+
     pub async fn run_loop(&self) {
         loop {
             match self.capture_context().await {
@@ -38,7 +45,13 @@ impl IngestionService {
                     // TODO: Save to SQLite Vector DB
                 },
                 Err(e) => {
-                    eprintln!("Error capturing context: {}", e);
+                    let err_msg = e.to_string();
+                    if err_msg.contains("Tesseract not found") {
+                        // Print only once or periodically, or just a short message
+                        eprintln!("Warning: Tesseract not found. OCR disabled.");
+                    } else {
+                        eprintln!("Error capturing context: {}", e);
+                    }
                 }
             }
             sleep(Duration::from_secs(5)).await;
@@ -63,7 +76,19 @@ impl IngestionService {
         };
 
         // Perform OCR
-        let ocr_text = self.perform_ocr(&dynamic_image).await?;
+        let ocr_text = if self.is_tesseract_available() {
+            self.perform_ocr(&dynamic_image).await.unwrap_or_else(|e| {
+                eprintln!("OCR warning: {}", e);
+                String::new()
+            })
+        } else {
+            // Silently skip if not available (logged once at startup ideally, but here is fine)
+            static RECORDED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+            if !RECORDED.swap(true, std::sync::atomic::Ordering::Relaxed) {
+                 eprintln!("Tesseract not found. OCR features will be disabled.");
+            }
+            String::new()
+        };
 
         Ok(ScreenData {
             timestamp: Utc::now(),

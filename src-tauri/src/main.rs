@@ -25,7 +25,7 @@ fn main() {
     tauri::Builder::default()
         .setup(|_app| {
             // Start Ollama with llama3 model
-            println!("Starting Ollama server with llama3...");
+            println!("Starting Ollama server with qwen2.5-coder:1.5b...");
             std::thread::spawn(|| {
                 let _ = std::process::Command::new("ollama")
                     .args(["serve"])
@@ -34,7 +34,7 @@ fn main() {
                 std::thread::sleep(std::time::Duration::from_secs(2));
                 // Pull/run llama3 to ensure it's ready
                 let _ = std::process::Command::new("ollama")
-                    .args(["run", "llama3", "--keepalive", "24h"])
+                    .args(["run", "qwen2.5-coder:1.5b", "--keepalive", "24h"])
                     .spawn();
             });
 

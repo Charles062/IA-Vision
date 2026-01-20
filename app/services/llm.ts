@@ -43,40 +43,40 @@ ${JSON.stringify(simplifiedTree)}
   console.log("Sending to Ollama...");
 
   try {
-      const response = await fetch('http://localhost:11434/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'llama3', // or 'mistral'
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: userPrompt }
-          ],
-          stream: false,
-          format: 'json' // Enforce JSON mode if supported
-        })
-      });
+    const response = await fetch('http://localhost:11434/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'qwen2.5-coder:1.5b', // Using available model
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt }
+        ],
+        stream: false,
+        format: 'json' // Enforce JSON mode if supported
+      })
+    });
 
-      if (!response.ok) {
-        throw new Error(`Ollama API Error: ${response.statusText}`);
-      }
+    if (!response.ok) {
+      throw new Error(`Ollama API Error: ${response.statusText}`);
+    }
 
-      const data = await response.json();
-      let content = data.message.content;
-      console.log("Raw LLM Response:", content);
+    const data = await response.json();
+    let content = data.message.content;
+    console.log("Raw LLM Response:", content);
 
-      // Cleanup if LLM adds markdown
-      content = content.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Cleanup if LLM adds markdown
+    content = content.replace(/```json/g, '').replace(/```/g, '').trim();
 
-      return JSON.parse(content);
+    return JSON.parse(content);
   } catch (e) {
-      console.error("LLM Failed:", e);
-      // Fallback/Mock for demo if Ollama isn't running
-      if (userRequest.toLowerCase().includes("notepad")) {
-          return [
-              { action: 'type', text: 'Hello from Mock Mode', description: 'Mock typing' }
-          ];
-      }
-      throw e;
+    console.error("LLM Failed:", e);
+    // Fallback/Mock for demo if Ollama isn't running
+    if (userRequest.toLowerCase().includes("notepad")) {
+      return [
+        { action: 'type', text: 'Hello from Mock Mode', description: 'Mock typing' }
+      ];
+    }
+    throw e;
   }
 }
