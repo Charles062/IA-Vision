@@ -17,16 +17,14 @@ tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }
 anyhow = "1.0"
 reqwest = { version = "0.11", features = ["blocking", "json"] }
+async-recursion = "1.0"
 # Capture and OCR
 xcap = "0.0.6"
-image = "0.25"
+image = "0.24"
 active-win-pos-rs = "0.8"
+rusty-tesseract = "1.1"
 # Database
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "sqlite"] }
-# OCR Engine
-ocrs = "0.4"
-rten = "0.4"
-rten-tensor = "0.4"
 
 # Windows Automation
 [target.'cfg(target_os = "windows")'.dependencies]
