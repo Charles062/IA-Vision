@@ -20,18 +20,24 @@ pub struct ScreenData {
 pub struct IngestionService {
     // In a real implementation, we would hold the OCR engine instance here
     // engine: OcrEngine
+    tesseract_available: bool,
 }
 
 impl IngestionService {
     pub fn new() -> Self {
-        Self {}
+        // Cache tesseract availability to avoid expensive process spawning in the loop
+        let tesseract_available = std::process::Command::new("tesseract")
+            .arg("--version")
+            .output()
+            .is_ok();
+
+        Self {
+            tesseract_available,
+        }
     }
 
     fn is_tesseract_available(&self) -> bool {
-        std::process::Command::new("tesseract")
-            .arg("--version")
-            .output()
-            .is_ok()
+        self.tesseract_available
     }
 
     pub async fn run_loop(&self) {
@@ -78,9 +84,9 @@ impl IngestionService {
 
         // Perform OCR
         let ocr_text = if self.is_tesseract_available() {
-            let img_clone = dynamic_image.clone();
-            // OCR em thread separada (CPU-bound)
-            tokio::task::spawn_blocking(move || perform_ocr(img_clone))
+            // No need to clone dynamic_image as it's not used afterwards.
+            // Moving it into the closure saves a large memory copy.
+            tokio::task::spawn_blocking(move || perform_ocr(dynamic_image))
                 .await?? // Tratar JoinError e OCR Error
         } else {
             // Silently skip if not available (logged once at startup ideally, but here is fine)
