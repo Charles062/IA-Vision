@@ -7,7 +7,15 @@ export interface Action {
   description?: string;
 }
 
-export async function generatePlan(userRequest: string, uiTree: any[]): Promise<Action[]> {
+export interface UIElement {
+  id: string;
+  name: string;
+  control_type: string;
+  bounding_box: number[];
+  is_enabled: boolean;
+}
+
+export async function generatePlan(userRequest: string, uiTree: UIElement[]): Promise<Action[]> {
   // Filter the UI tree to reduce token count (crucial for local LLMs)
   // We only keep essential fields
   const simplifiedTree = uiTree.map(el => {
@@ -80,20 +88,21 @@ ${JSON.stringify(simplifiedTree)}
     const firstBracket = content.indexOf('[');
     const lastBracket = content.lastIndexOf(']');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let parsed: any;
 
     if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
       const potentialJson = content.substring(firstBracket, lastBracket + 1);
       try {
         parsed = JSON.parse(potentialJson);
-      } catch (e) {
+      } catch {
         console.error("Failed to parse extracted JSON:", potentialJson);
         // Fallback to full parse attempt
-        try { parsed = JSON.parse(content); } catch (e2) { }
+        try { parsed = JSON.parse(content); } catch { }
       }
     } else {
       // No brackets found, try parsing full content
-      try { parsed = JSON.parse(content); } catch (e) { }
+      try { parsed = JSON.parse(content); } catch { }
     }
 
     // Handle wrapped responses if we still ended up with an object

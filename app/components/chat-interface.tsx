@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Play, Loader2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { generatePlan } from '../services/llm';
+import { generatePlan, UIElement } from '../services/llm';
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -35,7 +35,7 @@ export default function ChatInterface() {
     try {
       // 1. Get Context
       setMessages(prev => [...prev, { role: 'system', content: 'Analyzing screen...' }]);
-      const uiTree = await invoke('get_ui_tree');
+      const uiTree = await invoke('get_ui_tree') as UIElement[];
       console.log("UI Tree:", uiTree);
 
       // 2. Plan with LLM
@@ -46,22 +46,15 @@ export default function ChatInterface() {
 
       // 3. Execute
       setMessages(prev => [...prev, { role: 'system', content: 'Executing actions...' }]);
-      for (const action of plan) {
-        await invoke('execute_action', {
-            actionType: action.action,
-            x: action.x || 0,
-            y: action.y || 0,
-            text: action.text
-        });
-        // Small delay between actions
-        await new Promise(r => setTimeout(r, 500));
-      }
+
+      await invoke('execute_plan', { actions: plan });
 
       setMessages(prev => [...prev, { role: 'system', content: 'Done.' }]);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'system', content: `Error: ${error.message || error}` }]);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setMessages(prev => [...prev, { role: 'system', content: `Error: ${errorMessage}` }]);
     } finally {
       setIsLoading(false);
     }
