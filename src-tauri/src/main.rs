@@ -8,7 +8,7 @@ mod accessibility;
 
 use ingestion::IngestionService;
 use tauri::Manager;
-use automation::implementation::perform_action;
+use automation::implementation::{perform_action, perform_actions};
 use accessibility::get_ui_tree as get_ui_tree_impl;
 
 #[tauri::command]
@@ -19,6 +19,16 @@ async fn get_ui_tree(max_depth: Option<u32>) -> Result<Vec<accessibility::UIElem
 #[tauri::command]
 fn execute_action(action_type: String, x: i32, y: i32, text: Option<String>) -> Result<(), String> {
     perform_action(&action_type, x, y, text.as_deref()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn execute_plan(actions: Vec<automation::Action>) -> Result<(), String> {
+    tokio::task::spawn_blocking(move || {
+        perform_actions(actions)
+    })
+    .await
+    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string())
 }
 
 fn main() {
@@ -50,7 +60,7 @@ fn main() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![get_ui_tree, execute_action])
+        .invoke_handler(tauri::generate_handler![get_ui_tree, execute_action, execute_plan])
         .plugin(tauri_plugin_shell::init())
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
