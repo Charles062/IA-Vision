@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Play, Loader2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { generatePlan } from '../services/llm';
+import { generatePlan, UIElement } from '../services/llm';
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -35,7 +35,7 @@ export default function ChatInterface() {
     try {
       // 1. Get Context
       setMessages(prev => [...prev, { role: 'system', content: 'Analyzing screen...' }]);
-      const uiTree = await invoke('get_ui_tree');
+      const uiTree = await invoke<UIElement[]>('get_ui_tree');
       console.log("UI Tree:", uiTree);
 
       // 2. Plan with LLM
@@ -59,9 +59,10 @@ export default function ChatInterface() {
 
       setMessages(prev => [...prev, { role: 'system', content: 'Done.' }]);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'system', content: `Error: ${error.message || error}` }]);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      setMessages(prev => [...prev, { role: 'system', content: `Error: ${errorMessage}` }]);
     } finally {
       setIsLoading(false);
     }

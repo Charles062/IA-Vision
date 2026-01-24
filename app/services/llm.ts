@@ -7,10 +7,17 @@ export interface Action {
   description?: string;
 }
 
-export async function generatePlan(userRequest: string, uiTree: any[]): Promise<Action[]> {
+export interface UIElement {
+  control_type: string;
+  name: string;
+  bounding_box?: [number, number, number, number];
+  [key: string]: unknown;
+}
+
+export async function generatePlan(userRequest: string, uiTree: UIElement[]): Promise<Action[]> {
   // Filter the UI tree to reduce token count (crucial for local LLMs)
   // We only keep essential fields
-  const simplifiedTree = uiTree.map(el => {
+  const simplifiedTree = uiTree.slice(0, 50).map(el => {
     // Backend returns bounding_box: [x, y, width, height]
     const [x, y, width, height] = el.bounding_box || [0, 0, 0, 0];
     return {
@@ -19,7 +26,7 @@ export async function generatePlan(userRequest: string, uiTree: any[]): Promise<
       x: Math.round(x + width / 2), // Center point
       y: Math.round(y + height / 2)
     };
-  }).slice(0, 50); // Limit items for safety
+  }); // Limit items for safety
 
   const systemPrompt = `You are a Windows Automation Agent.
 Your goal is to map a user request to a sequence of actions on the active window.
@@ -80,20 +87,21 @@ ${JSON.stringify(simplifiedTree)}
     const firstBracket = content.indexOf('[');
     const lastBracket = content.lastIndexOf(']');
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let parsed: any;
 
     if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
       const potentialJson = content.substring(firstBracket, lastBracket + 1);
       try {
         parsed = JSON.parse(potentialJson);
-      } catch (e) {
+      } catch {
         console.error("Failed to parse extracted JSON:", potentialJson);
         // Fallback to full parse attempt
-        try { parsed = JSON.parse(content); } catch (e2) { }
+        try { parsed = JSON.parse(content); } catch { }
       }
     } else {
       // No brackets found, try parsing full content
-      try { parsed = JSON.parse(content); } catch (e) { }
+      try { parsed = JSON.parse(content); } catch { }
     }
 
     // Handle wrapped responses if we still ended up with an object
