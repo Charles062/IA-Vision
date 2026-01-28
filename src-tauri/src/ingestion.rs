@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use std::sync::OnceLock;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -106,6 +107,9 @@ impl IngestionService {
     }
 }
 
+// Cache OCR arguments to avoid repeated allocations of the HashMap and whitelist String on every cycle.
+static OCR_ARGS: OnceLock<Args> = OnceLock::new();
+
 /// Executa o OCR utilizando o Tesseract instalado no sistema.
 /// Retorna o texto extraído ou erro.
 fn perform_ocr(img: DynamicImage) -> anyhow::Result<String> {
@@ -115,15 +119,15 @@ fn perform_ocr(img: DynamicImage) -> anyhow::Result<String> {
     let tesseract_img = Image::from_dynamic_image(&img)
         .map_err(|e| anyhow::anyhow!("Erro converter imagem p/ Tesseract: {}", e))?;
 
-    let args = Args {
+    let args = OCR_ARGS.get_or_init(|| Args {
         lang: "eng".to_string(),
         config_variables: HashMap::from([
             ("tessedit_char_whitelist".into(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:;?!@#$%&*()-_=+[]{}/\\\"'".into())
         ]),
         ..Default::default()
-    };
+    });
 
-    let text = rusty_tesseract::image_to_string(&tesseract_img, &args)
+    let text = rusty_tesseract::image_to_string(&tesseract_img, args)
         .map_err(|e| anyhow::anyhow!("Erro Tesseract (Verifique instalação): {}", e))?;
 
     if text.trim().is_empty() {
