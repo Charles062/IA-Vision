@@ -30,8 +30,15 @@ fn main() {
                 let _ = std::process::Command::new("ollama")
                     .args(["serve"])
                     .spawn();
-                // Give the server a moment to start
-                std::thread::sleep(std::time::Duration::from_secs(2));
+                // Give the server a moment to start (poll for readiness)
+                let start = std::time::Instant::now();
+                while start.elapsed() < std::time::Duration::from_secs(5) {
+                    if std::net::TcpStream::connect("127.0.0.1:11434").is_ok() {
+                        break;
+                    }
+                    std::thread::sleep(std::time::Duration::from_millis(200));
+                }
+
                 // Pull/run llama3 to ensure it's ready
                 let _ = std::process::Command::new("ollama")
                     .args(["run", "qwen2.5-coder:1.5b", "--keepalive", "24h"])
