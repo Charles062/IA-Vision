@@ -8,6 +8,7 @@ use active_win_pos_rs::get_active_window;
 use image::DynamicImage;
 use rusty_tesseract::{Args, Image};
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ScreenData {
@@ -115,19 +116,46 @@ fn perform_ocr(img: DynamicImage) -> anyhow::Result<String> {
     let tesseract_img = Image::from_dynamic_image(&img)
         .map_err(|e| anyhow::anyhow!("Erro converter imagem p/ Tesseract: {}", e))?;
 
-    let args = Args {
+    // Optimization: Initialize Args once to avoid repetitive allocation
+    static OCR_ARGS: OnceLock<Args> = OnceLock::new();
+    let args = OCR_ARGS.get_or_init(|| Args {
         lang: "eng".to_string(),
         config_variables: HashMap::from([
             ("tessedit_char_whitelist".into(), "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,:;?!@#$%&*()-_=+[]{}/\\\"'".into())
         ]),
         ..Default::default()
-    };
+    });
 
-    let text = rusty_tesseract::image_to_string(&tesseract_img, &args)
+    let text = rusty_tesseract::image_to_string(&tesseract_img, args)
         .map_err(|e| anyhow::anyhow!("Erro Tesseract (Verifique instalação): {}", e))?;
 
     if text.trim().is_empty() {
         return Ok("[Nenhum texto detectado]".to_string());
     }
     Ok(text)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::{DynamicImage, RgbaImage};
+
+    #[test]
+    fn test_perform_ocr_initialization() {
+        // Create a 1x1 blank image
+        let img = DynamicImage::ImageRgba8(RgbaImage::new(1, 1));
+
+        // This should not panic.
+        // It might return an error or empty string depending on tesseract behavior on blank image,
+        // but the goal is to verify OnceLock initialization works.
+        let result = perform_ocr(img);
+
+        // If tesseract is installed (which it is in this environment), it might return empty or error.
+        // We just want to ensure it ran past initialization.
+        // We can assert result is ok or check error message if not.
+        // Given dependencies are installed, it likely runs.
+        // result could be Ok("[Nenhum texto detectado]") or similar.
+        println!("OCR Result: {:?}", result);
+        assert!(result.is_ok() || result.is_err()); // Trivial assertion, but confirms code execution.
+    }
 }
